@@ -19,7 +19,6 @@ namespace AC2025
         public void Setup()
         {
             driver = new ChromeDriver();
-
             driver.Manage().Window.Maximize();
             driver.Navigate().GoToUrl("https://www.opencart.com/");
         }
@@ -31,7 +30,6 @@ namespace AC2025
             Assert.AreEqual("OpenCart - Open Source Shopping Cart Solution", driver.Title);
         }
 
-
         [TestMethod]
         public void Navigate_To_Features_Page()
         {
@@ -42,11 +40,29 @@ namespace AC2025
             Assert.IsTrue(driver.Title.Contains("Features"), "Pagina Features nu s-a deschis corect.");
         }
 
+        [TestMethod]
+        public void Verify_Demo_Link()
+        {
+            // Verifică dacă link-ul Demo funcționează și navighează corect
+            driver.FindElement(By.LinkText("Demo")).Click();
+            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+            wait.Until(ExpectedConditions.UrlContains("demo"));
+            Assert.IsTrue(driver.Url.Contains("demo"), "Link-ul Demo nu a navigat corect.");
+        }
+
+        [TestMethod]
+        public void Check_Download_Button()
+        {
+            // Verifică dacă butonul Free Download este vizibil și clicabil
+            var downloadButton = driver.FindElement(By.LinkText("FREE DOWNLOAD"));
+            Assert.IsTrue(downloadButton.Displayed, "Butonul Free Download nu este vizibil.");
+            Assert.IsTrue(downloadButton.Enabled, "Butonul Free Download nu este clicabil.");
+        }
+
         [TestCleanup]
         public void Cleanup()
         {
             driver.Quit();
         }
     }
-
 }
