@@ -51,12 +51,25 @@ namespace AC2025
         }
 
         [TestMethod]
-        public void Check_Download_Button()
+        public void Download_OpenCart()
         {
-            // Verifică dacă butonul Free Download este vizibil și clicabil
+            // Navighează la butonul FREE DOWNLOAD și apoi apasă Download Now
             var downloadButton = driver.FindElement(By.LinkText("FREE DOWNLOAD"));
             Assert.IsTrue(downloadButton.Displayed, "Butonul Free Download nu este vizibil.");
             Assert.IsTrue(downloadButton.Enabled, "Butonul Free Download nu este clicabil.");
+            downloadButton.Click();
+
+            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+            wait.Until(ExpectedConditions.UrlContains("download"));
+
+            // Caută butonul Download Now folosind alt textul imaginii
+            var downloadNowButton = wait.Until(drv => drv.FindElement(By.XPath("//img[@alt='Download OpenCart now']/ancestor::a")));
+            Assert.IsTrue(downloadNowButton.Displayed, "Butonul Download Now nu este vizibil.");
+            Assert.IsTrue(downloadNowButton.Enabled, "Butonul Download Now nu este clicabil.");
+            downloadNowButton.Click();
+
+            wait.Until(ExpectedConditions.UrlContains("download"));
+            Assert.IsTrue(driver.Url.Contains("download"), "Descărcarea nu a fost inițiată corect.");
         }
 
         [TestCleanup]
