@@ -23,79 +23,78 @@ namespace AC2025
             driver.Manage().Window.Maximize();
             driver.Navigate().GoToUrl("https://www.opencart.com/");
         }
-
         [TestMethod]
         public void Subscribe_To_Newsletter()
         {
             try
             {
-                WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
+                WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
 
-                // Derulează la secțiunea newsletter
+                // 1. Derulează și completează formularul inițial
                 IJavaScriptExecutor js = (IJavaScriptExecutor)driver;
-                js.ExecuteScript("document.getElementById('newsletter').scrollIntoView();");
+                js.ExecuteScript("document.getElementById('newsletter').scrollIntoView({behavior: 'smooth'});");
 
-                // Așteaptă încărcarea secțiunii newsletter
                 wait.Until(ExpectedConditions.ElementIsVisible(By.Id("newsletter")));
 
-                // Localizăm câmpul de email
-                IWebElement emailInput = wait.Until(drv =>
-                {
-                    return drv.FindElement(By.XPath("//input[@name='newsletter' and @placeholder='Enter your email address']"));
-                });
-
-                // Generează un email unic
                 string testEmail = "darius@gmail.com";
-                emailInput.Clear();
-                emailInput.SendKeys(testEmail);
+                driver.FindElement(By.XPath("//input[@name='newsletter']"))
+                      .SendKeys(testEmail); 
 
-                // Localizăm butonul de subscribe (iconița săgeată dreapta)
-                IWebElement subscribeButton = wait.Until(drv =>
-                {
-                    return drv.FindElement(By.XPath("//button[contains(@class,'subscribe')]/i[contains(@class,'fa-angle-right')]"));
-                });
+                driver.FindElement(By.XPath("//button[contains(@class,'subscribe')]"))
+                      .Click();
 
-                // Face click pe buton
-                subscribeButton.Click();
+                // 2. Completează formularul secundar (dacă există)
+                wait.Until(ExpectedConditions.ElementToBeClickable(
+                    By.Id("mc-embedded-subscribe"))).Click();
 
-                // Așteaptă încărcarea noii pagini
-                wait.Until(drv => drv.FindElement(By.Id("mc-embedded-subscribe")).Displayed);
+                // 3. Verificări pe pagina de confirmare MailChimp
+                wait.Until(drv => drv.Url.Contains("subscription.perfector.com"));
 
-                // Localizăm elementele din noua pagină
-                IWebElement newPageSubmitButton = wait.Until(drv =>
-                {
-                    return drv.FindElement(By.XPath("//input[@id='mc-embedded-subscribe' and @type='submit']"));
-                });
+                // Verifică titlul paginii
+                IWebElement pageTitle = wait.Until(drv =>
+                    drv.FindElement(By.XPath("//h1[contains(.,'subscription') or contains(.,'confirmed')]")));
+                Assert.IsTrue(pageTitle.Text.IndexOf("confirmed", StringComparison.OrdinalIgnoreCase) >= 0,
+                    "Titlul paginii nu confirmă abonarea");
 
-                // Verifică dacă butonul de submit este corect
-                Assert.AreEqual("Subscribe", newPageSubmitButton.GetAttribute("value"), "Butonul de submit nu are textul corect");
-                Assert.IsTrue(newPageSubmitButton.Displayed, "Butonul de submit nu este vizibil");
-                Assert.IsTrue(newPageSubmitButton.Enabled, "Butonul de submit nu este activ");
+                // Verifică mesajul principal
+                IWebElement thankYouMessage = wait.Until(drv =>
+                    drv.FindElement(By.XPath("//*[contains(text(),'Thank you for subscribing')]")));
+                Assert.IsTrue(thankYouMessage.Displayed, "Mesajul de mulțumire lipsește");
 
-                // Face click pe butonul de submit din noua pagină
-                newPageSubmitButton.Click();
+                // Verifică mesajul secundar
+                IWebElement updatesMessage = driver.FindElement(
+                    By.XPath("//*[contains(text(),'Look out for news and updates')]"));
+                Assert.IsTrue(updatesMessage.Displayed, "Mesajul despre noutăți lipsește");
 
-                // Verifică mesajul final de succes
-                IWebElement finalSuccessMessage = wait.Until(drv =>
-                {
-                    return drv.FindElement(By.XPath("//div[contains(@class,'success') and contains(.,'subscribed')]"));
-                });
+                // Verifică butonul de continuare
+                IWebElement continueButton = driver.FindElement(
+                    By.XPath("//a[contains(.,'Continue to website')]"));
+                Assert.IsTrue(continueButton.Displayed && continueButton.Enabled,
+                    "Butonul 'Continue' nu este disponibil");
 
-                Assert.IsTrue(finalSuccessMessage.Displayed, "Mesajul final de succes nu este afișat");
-                Assert.IsTrue(finalSuccessMessage.Text.IndexOf("successfully subscribed", StringComparison.OrdinalIgnoreCase) >= 0,
-                    "Mesajul de succes nu conține textul așteptat");
+                // Verifică link-ul de gestionare a abonării
+                IWebElement manageSubscription = driver.FindElement(
+                    By.XPath("//a[contains(.,'Manage subscription preferences')]"));
+                Assert.IsTrue(manageSubscription.Displayed, "Link-ul de gestionare lipsește");
+                Assert.IsTrue(manageSubscription.GetAttribute("href").Contains("mailchimp"),
+                    "Link-ul de gestionare nu pare corect");
+
+                // Opțional: verifică prezența elementelor MailChimp în footer
+                var mailchimpElements = driver.FindElements(
+                    By.XPath("//*[contains(@class,'mailchimp') or contains(text(),'Mailchimp')]"));
+                Assert.IsTrue(mailchimpElements.Count > 0, "Elementele MailChimp lipsesc");
+
+                // Log pentru depanare
+                Console.WriteLine($"Abonarea pentru {testEmail} a fost confirmată cu succes");
             }
             catch (Exception ex)
             {
-                // Facem screenshot pentru depanare
                 string timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
                 string screenshotPath = $"Newsletter_Error_{timestamp}.png";
                 ((ITakesScreenshot)driver).GetScreenshot().SaveAsFile(screenshotPath);
-
                 Assert.Fail($"Abonarea la newsletter a eșuat: {ex.Message}. Screenshot: {screenshotPath}");
             }
         }
-
         [TestMethod]
         public void Navigate_To_Features_Page()
         {
