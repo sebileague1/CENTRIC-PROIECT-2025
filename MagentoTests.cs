@@ -58,23 +58,32 @@ namespace AC2025
                 // Face click pe buton
                 subscribeButton.Click();
 
-                // Verifică mesajul de succes (adaptat la implementarea actuală)
-                try
+                // Așteaptă încărcarea noii pagini
+                wait.Until(drv => drv.FindElement(By.Id("mc-embedded-subscribe")).Displayed);
+
+                // Localizăm elementele din noua pagină
+                IWebElement newPageSubmitButton = wait.Until(drv =>
                 {
-                    IWebElement successMessage = wait.Until(drv =>
-                    {
-                        return drv.FindElement(By.XPath("//div[contains(@class,'alert-success') or contains(text(),'success')]"));
-                    });
-                    Assert.IsTrue(successMessage.Displayed, "Mesajul de succes nu este vizibil");
-                }
-                catch
+                    return drv.FindElement(By.XPath("//input[@id='mc-embedded-subscribe' and @type='submit']"));
+                });
+
+                // Verifică dacă butonul de submit este corect
+                Assert.AreEqual("Subscribe", newPageSubmitButton.GetAttribute("value"), "Butonul de submit nu are textul corect");
+                Assert.IsTrue(newPageSubmitButton.Displayed, "Butonul de submit nu este vizibil");
+                Assert.IsTrue(newPageSubmitButton.Enabled, "Butonul de submit nu este activ");
+
+                // Face click pe butonul de submit din noua pagină
+                newPageSubmitButton.Click();
+
+                // Verifică mesajul final de succes
+                IWebElement finalSuccessMessage = wait.Until(drv =>
                 {
-                    // Verifică alternativ în consolă sau alte elemente
-                    IWebElement response = driver.FindElement(By.XPath("//*[contains(@class,'response')]"));
-                    Assert.IsTrue(response.Text.IndexOf("success", StringComparison.OrdinalIgnoreCase) >= 0,
-                                "Nu s-a primit confirmarea abonării");
-                    
-                }
+                    return drv.FindElement(By.XPath("//div[contains(@class,'success') and contains(.,'subscribed')]"));
+                });
+
+                Assert.IsTrue(finalSuccessMessage.Displayed, "Mesajul final de succes nu este afișat");
+                Assert.IsTrue(finalSuccessMessage.Text.IndexOf("successfully subscribed", StringComparison.OrdinalIgnoreCase) >= 0,
+                    "Mesajul de succes nu conține textul așteptat");
             }
             catch (Exception ex)
             {
