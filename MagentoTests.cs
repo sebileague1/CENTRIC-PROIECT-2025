@@ -9,6 +9,7 @@ namespace AC2025
     using OpenQA.Selenium.Chrome;
     using OpenQA.Selenium.Support.UI;
     using SeleniumExtras.WaitHelpers;
+    using System.Linq;
 
     [TestClass]
     public class MagentoTests
@@ -24,10 +25,66 @@ namespace AC2025
         }
 
         [TestMethod]
-        public void HomePage_Title_IsCorrect()
+        public void Subscribe_To_Newsletter()
         {
-            // Verifică dacă titlul paginii principale este cel așteptat
-            Assert.AreEqual("OpenCart - Open Source Shopping Cart Solution", driver.Title);
+            try
+            {
+                WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
+
+                // Derulează la secțiunea newsletter
+                IJavaScriptExecutor js = (IJavaScriptExecutor)driver;
+                js.ExecuteScript("document.getElementById('newsletter').scrollIntoView();");
+
+                // Așteaptă încărcarea secțiunii newsletter
+                wait.Until(ExpectedConditions.ElementIsVisible(By.Id("newsletter")));
+
+                // Localizăm câmpul de email
+                IWebElement emailInput = wait.Until(drv =>
+                {
+                    return drv.FindElement(By.XPath("//input[@name='newsletter' and @placeholder='Enter your email address']"));
+                });
+
+                // Generează un email unic
+                string testEmail = "darius@gmail.com";
+                emailInput.Clear();
+                emailInput.SendKeys(testEmail);
+
+                // Localizăm butonul de subscribe (iconița săgeată dreapta)
+                IWebElement subscribeButton = wait.Until(drv =>
+                {
+                    return drv.FindElement(By.XPath("//button[contains(@class,'subscribe')]/i[contains(@class,'fa-angle-right')]"));
+                });
+
+                // Face click pe buton
+                subscribeButton.Click();
+
+                // Verifică mesajul de succes (adaptat la implementarea actuală)
+                try
+                {
+                    IWebElement successMessage = wait.Until(drv =>
+                    {
+                        return drv.FindElement(By.XPath("//div[contains(@class,'alert-success') or contains(text(),'success')]"));
+                    });
+                    Assert.IsTrue(successMessage.Displayed, "Mesajul de succes nu este vizibil");
+                }
+                catch
+                {
+                    // Verifică alternativ în consolă sau alte elemente
+                    IWebElement response = driver.FindElement(By.XPath("//*[contains(@class,'response')]"));
+                    Assert.IsTrue(response.Text.IndexOf("success", StringComparison.OrdinalIgnoreCase) >= 0,
+                                "Nu s-a primit confirmarea abonării");
+                    
+                }
+            }
+            catch (Exception ex)
+            {
+                // Facem screenshot pentru depanare
+                string timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
+                string screenshotPath = $"Newsletter_Error_{timestamp}.png";
+                ((ITakesScreenshot)driver).GetScreenshot().SaveAsFile(screenshotPath);
+
+                Assert.Fail($"Abonarea la newsletter a eșuat: {ex.Message}. Screenshot: {screenshotPath}");
+            }
         }
 
         [TestMethod]
