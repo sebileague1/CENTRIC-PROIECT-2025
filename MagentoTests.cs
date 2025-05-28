@@ -4,34 +4,31 @@ using System;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
-using SeleniumExtras.WaitHelpers; // Pentru ExpectedConditions
-using System.Linq; // Necesar pentru .Last(), .Any()
-using System.IO;   // Necesar pentru Path.Combine
+using SeleniumExtras.WaitHelpers;
+using System.Linq;
+using System.IO;
 
 namespace AC2025
 {
-    using Microsoft.VisualStudio.TestTools.UnitTesting;
-    using System;
-    using OpenQA.Selenium;
-    using OpenQA.Selenium.Chrome;
-    using OpenQA.Selenium.Support.UI;
-    using SeleniumExtras.WaitHelpers;
-    using System.Linq;
-
     [TestClass]
     public class MagentoTests
     {
         private IWebDriver driver;
         private WebDriverWait wait;
+        private const int PauzaIntrePasi = 1500;
 
         [TestInitialize]
         public void Setup()
         {
             driver = new ChromeDriver();
             driver.Manage().Window.Maximize();
+            
             wait = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
             driver.Navigate().GoToUrl("https://www.opencart.com/");
+            
+            Thread.Sleep(PauzaIntrePasi / 2);
         }
+
         [TestMethod]
         public void Subscribe_To_Newsletter()
         {
@@ -42,48 +39,53 @@ namespace AC2025
 
                 wait.Until(ExpectedConditions.ElementIsVisible(By.Id("newsletter")));
                 js.ExecuteScript("document.getElementById('newsletter').scrollIntoView({behavior: 'smooth'});");
+                
+                Thread.Sleep(PauzaIntrePasi / 2);
 
                 wait.Until(ExpectedConditions.ElementIsVisible(By.Id("newsletter")));
 
                 string testEmail = "darius" + "@gmail.com";
                 driver.FindElement(By.XPath("//input[@name='newsletter']"))
                       .SendKeys(testEmail);
+                
+                Thread.Sleep(PauzaIntrePasi / 3);
 
                 originalWindowHandle = driver.CurrentWindowHandle;
-
                 driver.FindElement(By.XPath("//button[contains(@class,'subscribe')]")).Click();
+                
+                Thread.Sleep(PauzaIntrePasi);
+
                 try
                 {
+                    
                     WebDriverWait shortWait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
                     shortWait.Until(ExpectedConditions.ElementToBeClickable(By.Id("mc-embedded-subscribe"))).Click();
+                    
+                    Thread.Sleep(PauzaIntrePasi / 2);
                 }
                 catch (WebDriverTimeoutException)
                 {
-                    Console.WriteLine("Butonul 'mc-embedded-subscribe' nu a apărut sau nu a fost necesar. Se continuă...");
+                    Console.WriteLine("Butonul 'mc-embedded-subscribe' nu a apărut (OK). Se continuă...");
                 }
                 catch (Exception exInner) when (exInner is ElementNotInteractableException || exInner is StaleElementReferenceException)
                 {
-                    Console.WriteLine($"Eroare la interacțiunea cu 'mc-embedded-subscribe': {exInner.Message}. Este posibil ca noul tab să se fi deschis deja.");
+                    Console.WriteLine($"Eroare la interacțiunea cu 'mc-embedded-subscribe': {exInner.Message}. Se continuă...");
                 }
 
                 wait.Until(drv => drv.WindowHandles.Count > 1);
+                
+                Thread.Sleep(PauzaIntrePasi / 3);
 
-                string newWindowHandle = string.Empty;
-                foreach (var handle in driver.WindowHandles)
-                {
-                    if (handle != originalWindowHandle)
-                    {
-                        newWindowHandle = handle;
-                        break;
-                    }
-                }
+                string newWindowHandle = driver.WindowHandles.FirstOrDefault(h => h != originalWindowHandle);
 
                 if (string.IsNullOrEmpty(newWindowHandle))
                 {
                     throw new Exception("Noul tab nu a putut fi găsit.");
                 }
 
-                driver.SwitchTo().Window(newWindowHandle); 
+                driver.SwitchTo().Window(newWindowHandle);
+                
+                Thread.Sleep(PauzaIntrePasi / 3);
 
                 wait.Until(ExpectedConditions.UrlContains("list-manage.com"));
                 Assert.IsTrue(driver.Url.ToLower().Contains("list-manage.com"),
@@ -93,10 +95,9 @@ namespace AC2025
                     By.XPath("//*[normalize-space()='Your subscription to our list has been confirmed.']")));
 
                 Assert.IsTrue(confirmationMessageElement.Displayed,
-                    "Mesajul 'Your subscription to our list has been confirmed.' nu este vizibil pe noul tab.");
+                    "Mesajul de confirmare nu este vizibil.");
 
                 Console.WriteLine($"Abonarea pentru {testEmail} a fost confirmată cu succes pe noul tab: {driver.Url}");
-
             }
             catch (Exception ex)
             {
@@ -136,8 +137,11 @@ namespace AC2025
         public void Navigate_To_Features_Page()
         {
             driver.FindElement(By.LinkText("Features")).Click();
-            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
-            wait.Until(ExpectedConditions.TitleContains("Features"));
+            
+            Thread.Sleep(PauzaIntrePasi / 2);
+
+            WebDriverWait localWait = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
+            localWait.Until(ExpectedConditions.TitleContains("Features"));
             Assert.IsTrue(driver.Title.Contains("Features"), "Pagina Features nu s-a deschis corect.");
         }
 
@@ -145,8 +149,11 @@ namespace AC2025
         public void Verify_Demo_Link()
         {
             driver.FindElement(By.LinkText("Demo")).Click();
-            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
-            wait.Until(ExpectedConditions.UrlContains("demo"));
+            
+            Thread.Sleep(PauzaIntrePasi / 2);
+
+            WebDriverWait localWait = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
+            localWait.Until(ExpectedConditions.UrlContains("demo"));
             Assert.IsTrue(driver.Url.Contains("demo"), "Link-ul Demo nu a navigat corect.");
         }
 
@@ -157,22 +164,28 @@ namespace AC2025
             Assert.IsTrue(downloadButton.Displayed, "Butonul Free Download nu este vizibil.");
             Assert.IsTrue(downloadButton.Enabled, "Butonul Free Download nu este clicabil.");
             downloadButton.Click();
+            
+            Thread.Sleep(PauzaIntrePasi);
 
-            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
-            wait.Until(ExpectedConditions.UrlContains("download"));
+            WebDriverWait localWait = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
+            localWait.Until(ExpectedConditions.UrlContains("download"));
 
-            var downloadNowButton = wait.Until(drv => drv.FindElement(By.XPath("//img[@alt='Download OpenCart now']/ancestor::a")));
+            var downloadNowButton = localWait.Until(drv => drv.FindElement(By.XPath("//img[@alt='Download OpenCart now']/ancestor::a")));
             Assert.IsTrue(downloadNowButton.Displayed, "Butonul Download Now nu este vizibil.");
             Assert.IsTrue(downloadNowButton.Enabled, "Butonul Download Now nu este clicabil.");
             downloadNowButton.Click();
+            
+            Thread.Sleep(PauzaIntrePasi);
 
-            wait.Until(ExpectedConditions.UrlContains("download"));
+            localWait.Until(ExpectedConditions.UrlContains("download"));
             Assert.IsTrue(driver.Url.Contains("download"), "Descărcarea nu a fost inițiată corect.");
         }
 
         [TestCleanup]
         public void Cleanup()
         {
+            
+            Thread.Sleep(500);
             driver.Quit();
         }
     }
